@@ -1,8 +1,9 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.1 先修門檻升級版 - Render 部署專用版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.2 終極美化與防亂碼版)
 # ============================================================
 import os
 import urllib.parse
+import urllib.request
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import gradio as gr
@@ -11,19 +12,25 @@ import traceback
 print("⏳ [1/3] 正在載入字體與環境設定...")
 
 # ==========================================
-# ⚠️ 重要：Render 中文亂碼解決方案
-# 請去 Google Fonts 下載「NotoSansTC-Regular.ttf」
-# 並把該檔案跟這支 education.py 放在同一個 GitHub 資料夾內
+# 🚀 終極防亂碼機制：自動下載高可用度中文字體
+# 這樣你就不需要手動上傳字體檔到 GitHub 了！
 # ==========================================
-local_font_path = "NotoSansTC-Regular.ttf"
+font_url = "https://raw.githubusercontent.com/halfrost/Halfrost-Field/master/contents/Machine_Learning/TaipeiSansTCBeta-Regular.ttf"
+local_font_path = "TaipeiSansTCBeta-Regular.ttf"
+
+if not os.path.exists(local_font_path):
+    print("⏳ 系統未偵測到中文字體，正在自動下載中 (只需幾秒鐘)...")
+    try:
+        urllib.request.urlretrieve(font_url, local_font_path)
+        print("✅ 字體下載完成！")
+    except Exception as e:
+        print(f"⚠️ 字體下載失敗: {e}")
 
 if os.path.exists(local_font_path):
     custom_font = fm.FontProperties(fname=local_font_path)
-    # 強制將 Matplotlib 預設字體加上該字體名稱
     fm.fontManager.addfont(local_font_path)
     plt.rcParams['font.sans-serif'] = [custom_font.get_name()]
 else:
-    print("⚠️ 警告：找不到 NotoSansTC-Regular.ttf，圖表中文可能會顯示為亂碼（方塊）。")
     custom_font = fm.FontProperties()
     plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 
@@ -96,7 +103,9 @@ def analyze_results(*answers):
         names = list(filtered_scores.keys())
         values = list(filtered_scores.values())
 
+        # 設定圖表背景顏色也為 #fbfbfb
         fig, ax = plt.subplots(figsize=(8, 8), facecolor='#fbfbfb')
+        ax.set_facecolor('#fbfbfb')
         explode = [0.1 if val == max_val else 0 for val in values]
 
         base_grays = ['#777777', '#999999', '#bbbbbb', '#cccccc', '#dddddd']
@@ -157,12 +166,20 @@ def analyze_results(*answers):
         crash_html = f"<div style='color: red; padding: 20px; border: 2px solid red; background: #ffe6e6;'><h3>後端發生異常錯誤</h3><pre>{error_msg}</pre></div>"
         return (gr.update(visible=True, value=crash_html), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
 
+# ==========================================
+# 🎨 增強版 CSS：強制清除所有預設的灰底與邊框
+# ==========================================
 css = """
-    .gradio-container { background-color: #fbfbfb !important; color: #000 !important; }
+    body, html, main, .gradio-container, .contain, .wrap { background-color: #fbfbfb !important; }
     body.dark { background-color: #fbfbfb !important; }
     footer { display: none !important; }
     button[aria-label="Copy"], button[aria-label="Fullscreen"], .svelte-11ht8k, .action-buttons, .copy-button { display: none !important; }
     .gradio-html { border: none !important; box-shadow: none !important; background: transparent !important; }
+    
+    /* 清除表單與區塊的預設灰色背景 */
+    .form, .panel, .block, .svelte-112innx { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+    #main-layout { background-color: transparent !important; }
+
     .quiz-panel { background: #ffffff !important; border: 3px solid #000 !important; border-radius: 1.5rem !important; padding: 40px !important; box-shadow: 6px 6px 0px #000 !important; }
     .gradio-radio { background: transparent !important; border: none !important; box-shadow: none !important; margin-bottom: 30px !important; }
     .gradio-radio > span { font-size: 22px !important; font-weight: 900 !important; color: #000000 !important; margin-bottom: 15px !important; display: block !important; }
@@ -172,7 +189,7 @@ css = """
     .gradio-radio label:has(input:checked) { background-color: #000 !important; border-color: #000 !important; box-shadow: 3px 3px 0px #e0e0e0 !important; }
     .gradio-radio label:has(input:checked) span { color: #fff !important; }
     .tabs { border-bottom: 3px solid #000 !important; margin-bottom: 25px !important; }
-    .tab-nav button { font-weight: 900 !important; font-size: 16px !important; color: #888 !important; border: none !important; padding: 15px 25px !important; }
+    .tab-nav button { font-weight: 900 !important; font-size: 16px !important; color: #888 !important; border: none !important; padding: 15px 25px !important; background: transparent !important; }
     .tab-nav button.selected { color: #000 !important; border-bottom: 5px solid #000 !important; }
     .btn-submit { background: #000 !important; color: #fff !important; border-radius: 50px !important; font-weight: 900 !important; font-size: 20px !important; padding: 25px 0 !important; border: 2px solid #000 !important; margin-top: 30px !important; cursor: pointer !important; transition: all 0.3s ease !important;}
     .btn-submit:hover { background: #fff !important; color: #000 !important; box-shadow: 5px 5px 0px #000 !important; transform: translateY(-3px); }
@@ -209,9 +226,5 @@ with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
 
 print("⏳ [3/3] 正在啟動專屬網頁伺服器...")
 
-# ==========================================
-# ⚠️ 重要：Render 的啟動設定
-# 自動綁定 Render 提供的 PORT，並允許外部連線 (0.0.0.0)
-# ==========================================
 port = int(os.environ.get("PORT", 7860))
 app.launch(server_name="0.0.0.0", server_port=port)
