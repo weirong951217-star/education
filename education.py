@@ -1,5 +1,5 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.4 強制字體綁定版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.6 終極字體防護版)
 # ============================================================
 import os
 import urllib.request
@@ -12,24 +12,25 @@ import traceback
 print("⏳ [1/3] 正在執行環境設定與中文字體安全下載...")
 
 # ==========================================
-# 🚀 確保中文字體存在
+# 🚀 終極防亂碼機制：改用 Google 官方最穩定的 NotoSansTC TTF
 # ==========================================
-local_font_path = "TaipeiSansTCBeta-Regular.ttf"
-font_url = "https://raw.githubusercontent.com/halfrost/Halfrost-Field/master/contents/Machine_Learning/TaipeiSansTCBeta-Regular.ttf"
+local_font_path = "NotoSansTC-Regular.ttf"
+font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
 
+# 確保字體下載成功
 if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
-    print("⏳ 下載中文字體中...")
+    print("⏳ 下載高解析度中文字體中 (確保標題與教授名字正常顯示)...")
     try:
         req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=15) as response:
+        with urllib.request.urlopen(req, timeout=20) as response:
             with open(local_font_path, 'wb') as f:
                 f.write(response.read())
         print("✅ 字體下載完成！")
     except Exception as e:
         print(f"⚠️ 字體下載失敗: {e}")
 
-# 建立專屬字體物件 (準備強制綁定給每一個文字)
-if os.path.exists(local_font_path) and os.path.getsize(local_font_path) > 1000000:
+# 建立專屬字體物件
+if os.path.exists(local_font_path):
     custom_font = fm.FontProperties(fname=local_font_path)
 else:
     custom_font = fm.FontProperties()
@@ -57,12 +58,12 @@ professors_reqs = {
 }
 
 professors_photos = {
-    "蔡介元": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡介元')}&background=4F46E5&color=fff&size=200&bold=true",
-    "呂卓勲": f"https://ui-avatars.com/api/?name={urllib.parse.quote('呂卓勲')}&background=10B981&color=fff&size=200&bold=true",
-    "蔡啟揚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡啟揚')}&background=F59E0B&color=fff&size=200&bold=true",
-    "潘劍輝": f"https://ui-avatars.com/api/?name={urllib.parse.quote('潘劍輝')}&background=EC4899&color=fff&size=200&bold=true",
-    "林瑞豐": f"https://ui-avatars.com/api/?name={urllib.parse.quote('林瑞豐')}&background=8B5CF6&color=fff&size=200&bold=true",
-    "周金枚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('周金枚')}&background=06B6D4&color=fff&size=200&bold=true"
+    "蔡介元": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡介元')}&background=000000&color=fff&size=200&bold=true",
+    "呂卓勲": f"https://ui-avatars.com/api/?name={urllib.parse.quote('呂卓勲')}&background=000000&color=fff&size=200&bold=true",
+    "蔡啟揚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡啟揚')}&background=000000&color=fff&size=200&bold=true",
+    "潘劍輝": f"https://ui-avatars.com/api/?name={urllib.parse.quote('潘劍輝')}&background=000000&color=fff&size=200&bold=true",
+    "林瑞豐": f"https://ui-avatars.com/api/?name={urllib.parse.quote('林瑞豐')}&background=000000&color=fff&size=200&bold=true",
+    "周金枚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('周金枚')}&background=000000&color=fff&size=200&bold=true"
 }
 
 professors_papers = {
@@ -100,39 +101,49 @@ def analyze_results(*answers):
 
         filtered_scores = {k: v for k, v in scores.items() if v > 0}
         max_val = max(filtered_scores.values()) if filtered_scores else 1
-        names = list(filtered_scores.keys())
+        names = list(filtered_scores.keys())  # 這裡儲存了要顯示在旁邊的教授名字
         values = list(filtered_scores.values())
 
-        # 設定圖表背景為純白色
+        # 設定圖表背景為純白
         fig, ax = plt.subplots(figsize=(8, 8), facecolor='#ffffff')
         ax.set_facecolor('#ffffff')
         
         explode = [0.1 if val == max_val else 0 for val in values]
-        color_palette = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4']
-        colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
+        base_grays = ['#bbbbbb', '#999999', '#777777', '#aaaaaa', '#888888']
+        colors = []
+        gray_idx = 0
+        for val in values:
+            if val == max_val:
+                colors.append('#000000')
+            else:
+                colors.append(base_grays[gray_idx % len(base_grays)])
+                gray_idx += 1
 
-        # 繪製圓餅圖 (包含教授名字與百分比)
+        # ==========================================
+        # 📊 圓餅圖繪製：labels=names 就是讓教授名字出現在旁邊
+        # autopct='%1.1f%%' 就是讓 % 數出現在圖表內
+        # ==========================================
         wedges, texts, autotexts = ax.pie(
             values, explode=explode, labels=names, colors=colors,
             autopct='%1.1f%%', startangle=140,
             wedgeprops={'edgecolor': 'white', 'linewidth': 3}
         )
 
-        # 🌟 關鍵修復：強制將每一個「教授名字」套用中文字體
+        # 🌟 強制綁定：把旁邊出現的「教授名字」套用剛下載好的中文字體
         for text in texts:
             text.set_fontproperties(custom_font)
             text.set_fontsize(16)
             text.set_color('#000000')
 
-        # 🌟 關鍵修復：強制將每一個「百分比」設定樣式
+        # 🌟 強制綁定：把裡面的「% 數」套用剛下載好的中文字體
         for autotext in autotexts:
             autotext.set_fontproperties(custom_font)
             autotext.set_color('#ffffff')
-            autotext.set_fontsize(15)
+            autotext.set_fontsize(14)
             autotext.set_fontweight('bold')
 
-        # 🌟 關鍵修復：強制將最上面的「標題」套用中文字體
-        ax.set_title('教授學術契合度分佈', fontproperties=custom_font, fontsize=26, fontweight='bold', color='#000000', pad=20)
+        # 🌟 強制綁定：把你要求的「最上面標題」打上去並套用字體
+        ax.set_title('教授學術契合度分布', fontproperties=custom_font, fontsize=28, color='#000000', pad=20)
 
         recommended_profs = [p for p, s in scores.items() if s == max_val]
         report_html = "<div style='margin-top: 20px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的主力指導教授</h2>"
