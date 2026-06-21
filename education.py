@@ -90,8 +90,8 @@ def analyze_results(*answers):
         # =========================================================
         # 📊 1. 產生純數字百分比圓餅圖 (不帶任何中文，完美避免亂碼)
         # =========================================================
-        fig, ax = plt.subplots(figsize=(6, 6), facecolor='#fbfbfb')
-        ax.set_facecolor('#fbfbfb')
+        fig, ax = plt.subplots(figsize=(6, 6), facecolor='#ffffff')  # 改為純白底色讓圖表更突出
+        ax.set_facecolor('#ffffff')
         explode = [0.08 if val == max_val else 0 for val in values]
         
         # 只保留 autopct='%1.1f%%'，這樣圓餅圖內就會出現數字
@@ -186,19 +186,28 @@ def analyze_results(*answers):
         )
 
 # ==========================================
-# 🎨 增強版 CSS：確保背景乾淨、排版漂亮
+# 🎨 增強版 CSS：全新漸層背景，與主入口網統一視覺
 # ==========================================
 css = """
-    body, html, main, .gradio-container, .contain, .wrap { background-color: #fbfbfb !important; }
-    body.dark { background-color: #fbfbfb !important; }
+    /* 將背景換成指定的藍粉漸層光暈，並固定背景避免捲動斷層 */
+    body, html, main, .gradio-container, .contain, .wrap { 
+        background-color: #f8fafc !important;
+        background-image: 
+            radial-gradient(circle at 0% 0%, #c7d2fe 0%, transparent 60%), 
+            radial-gradient(circle at 100% 100%, #fbcfe8 0%, transparent 60%) !important;
+        background-attachment: fixed !important;
+    }
+    
+    body.dark { background-color: #f8fafc !important; }
     footer { display: none !important; }
     button[aria-label="Copy"], button[aria-label="Fullscreen"], .svelte-11ht8k, .action-buttons, .copy-button { display: none !important; }
     .gradio-html { border: none !important; box-shadow: none !important; background: transparent !important; }
     
+    /* 讓 Gradio 預設的區塊背景透明，才看得到我們的漸層底色 */
     .form, .panel, .block, .svelte-112innx { background-color: transparent !important; border: none !important; box-shadow: none !important; }
     #main-layout { background-color: transparent !important; }
 
-    .quiz-panel { background: #ffffff !important; border: 3px solid #000 !important; border-radius: 1.5rem !important; padding: 40px !important; box-shadow: 6px 6px 0px rgba(0,0,0,0.1) !important; }
+    .quiz-panel { background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(10px) !important; border: 3px solid #000 !important; border-radius: 1.5rem !important; padding: 40px !important; box-shadow: 6px 6px 0px rgba(0,0,0,0.1) !important; }
     .gradio-radio { background: transparent !important; border: none !important; box-shadow: none !important; margin-bottom: 30px !important; }
     .gradio-radio > span { font-size: 22px !important; font-weight: 900 !important; color: #000000 !important; margin-bottom: 15px !important; display: block !important; }
     .gradio-radio label { background-color: #fff !important; border: 2px solid #e0e0e0 !important; border-radius: 12px !important; padding: 12px 20px !important; cursor: pointer !important; transition: all 0.2s ease !important; }
