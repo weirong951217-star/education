@@ -1,42 +1,13 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.1 終極完美圖表與防亂碼版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.2 圖文剝離極速版)
 # ============================================================
 import os
-import requests
 import urllib.parse
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 import gradio as gr
 import traceback
 
-print("⏳ [1/3] 正在執行環境設定與中文字體強制下載...")
-
-# ==========================================
-# 🚀 終極防亂碼機制：改用 requests 強制下載字體，突破 Render 網路限制
-# ==========================================
-local_font_path = "NotoSansTC-Regular.ttf"
-font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
-
-if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
-    print("⏳ 正在強制下載高解析度中文字體中...")
-    try:
-        response = requests.get(font_url, timeout=20)
-        response.raise_for_status() # 確認下載成功
-        with open(local_font_path, 'wb') as f:
-            f.write(response.content)
-        print("✅ 字體下載完成！")
-    except Exception as e:
-        print(f"⚠️ 字體下載失敗: {e}")
-
-# 建立專屬字體物件 (準備強制綁定給圓餅圖的每一個文字)
-if os.path.exists(local_font_path):
-    custom_font = fm.FontProperties(fname=local_font_path)
-else:
-    custom_font = fm.FontProperties()
-
-plt.rcParams['axes.unicode_minus'] = False
-
-print("⏳ [2/3] 正在載入教授資料庫與問卷...")
+print("⏳ [1/2] 正在載入教授資料庫與問卷...")
 
 professors_info = {
     "蔡介元": {"field": "AI、大數據分析、資料探勘", "intro": "適合喜歡人工智慧、機器學習與資料分析的學生。"},
@@ -80,7 +51,7 @@ questions = [
     {"q": "Q3 做報告時，你通常最喜歡負責什麼工作？", "options": {"蒐集數據並分析結果": "蔡介元", "設計產品外觀或介面": "周金枚", "規劃工作流程與時程": "蔡啟揚", "建立網站或系統功能": "呂卓勲", "研究使用者的想法與需求": "林瑞豐", "設計計算模型解決問題": "潘劍輝"}},
     {"q": "Q4 如果未來要選修一門課，你最想修哪一門？", "options": {"資料分析與AI應用": "蔡介元", "人機互動與智慧醫療": "林瑞豐", "生產管理與供應鏈": "蔡啟揚", "網頁系統開發": "呂卓勲", "作業研究與最佳化": "潘劍輝", "人因工程與產品設計": "周金枚"}},
     {"q": "Q5 你認為自己最大的優勢是？", "options": {"能快速理解程式與系統架構": "呂卓勲", "很會觀察別人的需求": "林瑞豐", "邏輯分析能力強": "潘劍輝", "喜歡改善流程與管理事情": "蔡啟揚", "對設計和美感很敏銳": "周金枚", "喜歡研究資料中的規律": "蔡介元"}},
-    {"q": "Q6 下列哪個專題題目最吸引你？", "options": {"APP使用體驗改善研究": "林瑞豐", "AI預測模型建立": "蔡介元", "最佳送貨路線規劃": "潘劍輝", "智慧工廠排程改善": "蔡啟揚", "電商平台功能開發": "呂卓勲", "高齡者產品設計研究": "周金枚"}},
+    {"q": "Q6 下列哪個專題題目最吸引你？", "options": {"APP使用體驗改善研究": "林瑞豐", "AI預測模型建立": "蔡介元", "最佳送貨路線規劃": "潘劍輝", "智慧工廠排程改善": "蔡啟揚", "電商平台功能開發": "呂卓勲", "高齡者產品落計研究": "周金枚"}},
     {"q": "Q7 畢業後你最想從事哪種工作？", "options": {"資料分析師或AI工程師": "蔡介元", "產品設計師或UX設計師": "周金枚", "軟體工程師": "呂卓勲", "營運管理人員": "蔡啟揚", "使用者研究員": "林瑞豐", "決策分析師": "潘劍輝"}},
     {"q": "Q8 如果參加比賽，你最想挑戰哪一類？", "options": {"創新設計競賽": "周金枚", "商業流程改善競賽": "蔡啟揚", "程式設計競賽": "呂卓勲", "AI應用競賽": "蔡介元", "智慧醫療創新競賽": "林瑞豐", "數學建模競賽": "潘劍輝"}},
     {"q": "Q9 空閒時間學習新東西時，你最可能選擇？", "options": {"AI工具與資料分析": "蔡介元", "網頁或APP開發": "呂卓勲", "流程管理與企業經營": "蔡啟揚", "心理學與使用者行為": "林瑞豐", "最佳化演算法": "潘劍輝", "設計軟體與創意課程": "周金枚"}},
@@ -94,7 +65,7 @@ def analyze_results(*answers):
             return (
                 gr.update(visible=True, value=warning_box), 
                 gr.update(visible=True), gr.update(visible=False), 
-                gr.update(value=""), gr.update(value=None), gr.update(value="")
+                gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
             )
 
         scores = {name: 0 for name in professors_info}
@@ -102,50 +73,61 @@ def analyze_results(*answers):
             prof_name = questions[i]["options"][ans]
             scores[prof_name] += 1
 
-        # 🌟 過濾出所有得分大於 0 的教授
+        # 過濾出所有得分大於 0 的教授並排序
         filtered_scores = {k: v for k, v in scores.items() if v > 0}
-        
-        # 依照分數由高到低排序
         sorted_profs = sorted(filtered_scores.items(), key=lambda x: x[1], reverse=True)
         names = [prof for prof, score in sorted_profs]
         values = [score for prof, score in sorted_profs]
         max_val = values[0] if values else 1
+        
+        total = sum(values)
+        percents = [(val / total) * 100 for val in values]
 
         # 🎨 鮮豔色彩配置
-        color_palette = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6', '#06B6D4']
+        color_palette = ['#000000', '#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4']
         colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
 
-        fig, ax = plt.subplots(figsize=(8, 8), facecolor='#fbfbfb')
+        # =========================================================
+        # 📊 1. 產生純淨圓餅圖 (完全不含標籤與文字，避免亂碼方塊)
+        # =========================================================
+        fig, ax = plt.subplots(figsize=(6, 6), facecolor='#fbfbfb')
         ax.set_facecolor('#fbfbfb')
-        
-        # 將最高分的那一塊稍微凸顯
         explode = [0.08 if val == max_val else 0 for val in values]
-
-        # 📊 繪製圓餅圖：教授名字在外 (labels)，百分比在內 (autopct)
-        wedges, texts, autotexts = ax.pie(
-            values, explode=explode, labels=names, colors=colors,
-            autopct='%1.1f%%', startangle=140,
-            wedgeprops={'edgecolor': 'white', 'linewidth': 3}
+        
+        # 這裡不放 labels，也不放 autopct
+        ax.pie(
+            values, explode=explode, colors=colors,
+            startangle=140, wedgeprops={'edgecolor': 'white', 'linewidth': 3}
         )
 
-        # 🌟 強制綁定字體給外圍的「教授名字」
-        for text in texts:
-            text.set_fontproperties(custom_font)
-            text.set_fontsize(18)  # 稍微放大教授名字
-            text.set_color('#000000')
-            text.set_fontweight('bold')
+        # =========================================================
+        # 📝 2. 生成標題 HTML
+        # =========================================================
+        title_html = "<h2 style='text-align: center; color: #000; font-weight: 900; font-size: 32px; margin-bottom: 20px; letter-spacing: 2px;'>📊 教授學術契合度分布</h2>"
 
-        # 🌟 強制綁定字體給內部的「百分比」
-        for autotext in autotexts:
-            autotext.set_fontproperties(custom_font)
-            autotext.set_color('#ffffff')
-            autotext.set_fontsize(16)
-            autotext.set_fontweight('bold')
+        # =========================================================
+        # 📝 3. 生成右側圖例 HTML (包含色塊、教授名字、百分比)
+        # =========================================================
+        legend_html = "<div style='display: flex; flex-direction: column; justify-content: center; gap: 20px; height: 100%; padding-left: 20px;'>"
+        for name, pct, color, val in zip(names, percents, colors, values):
+            if val == max_val:
+                top_badge = "<span style='font-size: 13px; color: #E11D48; margin-left: 10px;'>(TOP MATCH)</span>"
+                text_color = "#000"
+            else:
+                top_badge = ""
+                text_color = "#555"
+            
+            legend_html += f"""
+            <div style='display: flex; align-items: center; font-size: 20px; font-weight: 900; color: {text_color};'>
+                <div style='width: 28px; height: 28px; background-color: {color}; border-radius: 6px; margin-right: 15px; border: 1px solid #ddd;'></div>
+                <span>{name} - {pct:.1f}% {top_badge}</span>
+            </div>
+            """
+        legend_html += "</div>"
 
-        # 將「教授學術契合度分布」大標題用 HTML 生成在圖表正上方
-        chart_title_html = "<h2 style='text-align: center; color: #000; font-weight: 900; font-size: 32px; margin-bottom: 10px; letter-spacing: 2px;'>📊 教授學術契合度分布</h2>"
-
-        # 生成下方所有教授的詳細推薦名單
+        # =========================================================
+        # 📝 4. 生成推薦報告 HTML
+        # =========================================================
         report_html = "<div style='margin-top: 40px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的指導教授分析</h2>"
 
         for prof, score in sorted_profs:
@@ -154,7 +136,7 @@ def analyze_results(*answers):
             photo_url = professors_photos[prof]
             ndltd_url = f"https://www.google.com/search?q={urllib.parse.quote(f'site:ndltd.ncl.edu.tw \"{prof}\" 元智大學 工業工程與管理')}"
 
-            # 🎖️ 如果是最高分，給予紅色大標籤與黑底粗框；否則給予灰色標籤
+            # 最高分紅標，其餘灰標
             if score == max_val:
                 badge_html = "<span style='font-weight: 900; color: #fff; font-size: 13px; background: #E11D48; padding: 6px 16px; border-radius: 30px; letter-spacing: 2px;'>⭐ TOP MATCH (首選推薦)</span>"
                 border_style = "border: 4px solid #000;"
@@ -185,12 +167,13 @@ def analyze_results(*answers):
             report_html += f"</ul></div><div style='text-align: right; margin-top: 10px;'><a href='{ndltd_url}' target='_blank' style='display:inline-block; padding:14px 28px; background-color:#111; color:#fff; text-decoration:none; border-radius:50px; font-weight:900; font-size:15px; border:2px solid #111; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: all 0.2s;' onmouseover=\"this.style.transform='translateY(-2px)';\" onmouseout=\"this.style.transform='translateY(0)';\">🔍 前往博碩士論文網搜尋此教授</a></div></div>"
         
         report_html += "</div>"
+        plt.close(fig) # 釋放資源
         
         return (
             gr.update(visible=False, value=""), 
             gr.update(visible=False), 
             gr.update(visible=True), 
-            chart_title_html, fig, report_html
+            title_html, fig, legend_html, report_html
         )
     except Exception as e:
         error_msg = traceback.format_exc()
@@ -198,7 +181,7 @@ def analyze_results(*answers):
         return (
             gr.update(visible=True, value=crash_html), 
             gr.update(visible=True), gr.update(visible=False), 
-            gr.update(value=""), gr.update(value=None), gr.update(value="")
+            gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
         )
 
 # ==========================================
@@ -231,7 +214,7 @@ css = """
 
 js_func = "function() { document.body.classList.remove('dark'); }"
 
-print("⏳ [3/3] 正在建置使用者介面...")
+print("⏳ [2/2] 正在建置使用者介面...")
 
 with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
     gr.HTML("<div style='text-align: center; margin-top: 50px; margin-bottom: 40px;'><div style='text-transform: uppercase; font-size: 15px; color: #555; font-weight: 900; letter-spacing: 6px; margin-bottom: 12px;'>YuanZe IEM // Education Board</div><h1 style='font-size: 4.5rem; font-weight: 900; color: #000; margin: 0; letter-spacing: -2px;'>EDUCATION®</h1></div>")
@@ -254,14 +237,36 @@ with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
             submit_btn = gr.Button("🚀 提交並生成專屬推薦報表", elem_classes="btn-submit")
 
         with gr.Column(visible=False, elem_classes="quiz-panel") as result_col:
-            # 加入「教授學術契合度分布」大標題
+            # 1. 獨立的頂部大標題
             chart_title = gr.HTML(elem_classes="gradio-html")
-            plot_output = gr.Plot(show_label=False)
+            
+            # 2. 左右並排：左圖表、右圖例
+            with gr.Row():
+                with gr.Column(scale=1):
+                    plot_output = gr.Plot(show_label=False)
+                with gr.Column(scale=1):
+                    legend_output = gr.HTML(elem_classes="gradio-html")
+            
+            # 3. 下方完整的教授推薦列表
             html_output = gr.HTML(elem_classes="gradio-html")
             reset_btn = gr.Button("🔄 重新進行測驗", elem_classes="btn-submit")
 
-    submit_btn.click(fn=analyze_results, inputs=radio_inputs, outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, html_output])
-    reset_btn.click(fn=lambda: (gr.update(visible=False, value=""), gr.update(visible=True), gr.update(visible=False), gr.update(value=""), gr.update(value=None), gr.update(value="")), inputs=None, outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, html_output])
+    # 綁定按鈕事件 (對應 outputs 的順序)
+    submit_btn.click(
+        fn=analyze_results, 
+        inputs=radio_inputs, 
+        outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, legend_output, html_output]
+    )
+    
+    reset_btn.click(
+        fn=lambda: (
+            gr.update(visible=False, value=""), 
+            gr.update(visible=True), gr.update(visible=False), 
+            gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
+        ), 
+        inputs=None, 
+        outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, legend_output, html_output]
+    )
 
 print("✅ 啟動專屬網頁伺服器...")
 
