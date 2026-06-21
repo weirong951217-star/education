@@ -1,37 +1,44 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.2 終極美化與防亂碼版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.3 終極防亂碼與高顏值版)
 # ============================================================
 import os
-import urllib.parse
 import urllib.request
+import urllib.parse
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import gradio as gr
 import traceback
 
-print("⏳ [1/3] 正在載入字體與環境設定...")
+print("⏳ [1/3] 正在執行環境設定與中文字體安全下載...")
 
 # ==========================================
-# 🚀 終極防亂碼機制：自動下載高可用度中文字體
-# 這樣你就不需要手動上傳字體檔到 GitHub 了！
+# 🚀 終極防亂碼機制：帶有 User-Agent 的安全下載
+# 確保下載到真正的字體檔，而非被阻擋的錯誤網頁
 # ==========================================
-font_url = "https://raw.githubusercontent.com/halfrost/Halfrost-Field/master/contents/Machine_Learning/TaipeiSansTCBeta-Regular.ttf"
 local_font_path = "TaipeiSansTCBeta-Regular.ttf"
+font_url = "https://raw.githubusercontent.com/halfrost/Halfrost-Field/master/contents/Machine_Learning/TaipeiSansTCBeta-Regular.ttf"
 
-if not os.path.exists(local_font_path):
-    print("⏳ 系統未偵測到中文字體，正在自動下載中 (只需幾秒鐘)...")
+# 檢查檔案是否存在，且大小必須大於 1MB (確保不是抓到錯誤網頁)
+if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
+    print("⏳ 系統偵測不到有效中文字體，啟動安全下載中...")
     try:
-        urllib.request.urlretrieve(font_url, local_font_path)
+        # 偽裝成瀏覽器，避免被 GitHub 阻擋
+        req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            with open(local_font_path, 'wb') as f:
+                f.write(response.read())
         print("✅ 字體下載完成！")
     except Exception as e:
-        print(f"⚠️ 字體下載失敗: {e}")
+        print(f"⚠️ 字體下載失敗，錯誤訊息: {e}")
 
-if os.path.exists(local_font_path):
-    custom_font = fm.FontProperties(fname=local_font_path)
+# 將字體註冊進 Matplotlib 系統中
+if os.path.exists(local_font_path) and os.path.getsize(local_font_path) > 1000000:
     fm.fontManager.addfont(local_font_path)
-    plt.rcParams['font.sans-serif'] = [custom_font.get_name()]
+    custom_font = fm.FontProperties(fname=local_font_path)
+    # 全域設定字體，這樣底下就不需要每個物件都綁定 fontproperties
+    plt.rcParams['font.sans-serif'] = [custom_font.get_name(), 'sans-serif']
 else:
-    custom_font = fm.FontProperties()
+    print("⚠️ 警告：無法載入中文字體，可能顯示為方塊。")
     plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 
 plt.rcParams['axes.unicode_minus'] = False
@@ -57,12 +64,12 @@ professors_reqs = {
 }
 
 professors_photos = {
-    "蔡介元": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡介元')}&background=1a1a1a&color=fff&size=200&bold=true&font-size=0.4",
-    "呂卓勲": f"https://ui-avatars.com/api/?name={urllib.parse.quote('呂卓勲')}&background=1a1a1a&color=fff&size=200&bold=true&font-size=0.4",
-    "蔡啟揚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡啟揚')}&background=1a1a1a&color=fff&size=200&bold=true&font-size=0.4",
-    "潘劍輝": f"https://ui-avatars.com/api/?name={urllib.parse.quote('潘劍輝')}&background=1a1a1a&color=fff&size=200&bold=true&font-size=0.4",
-    "林瑞豐": f"https://ui-avatars.com/api/?name={urllib.parse.quote('林瑞豐')}&background=1a1a1a&color=fff&size=200&bold=true&font-size=0.4",
-    "周金枚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('周金枚')}&background=1a1a1a&color=fff&size=200&bold=true&font-size=0.4"
+    "蔡介元": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡介元')}&background=4F46E5&color=fff&size=200&bold=true",
+    "呂卓勲": f"https://ui-avatars.com/api/?name={urllib.parse.quote('呂卓勲')}&background=10B981&color=fff&size=200&bold=true",
+    "蔡啟揚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡啟揚')}&background=F59E0B&color=fff&size=200&bold=true",
+    "潘劍輝": f"https://ui-avatars.com/api/?name={urllib.parse.quote('潘劍輝')}&background=EC4899&color=fff&size=200&bold=true",
+    "林瑞豐": f"https://ui-avatars.com/api/?name={urllib.parse.quote('林瑞豐')}&background=8B5CF6&color=fff&size=200&bold=true",
+    "周金枚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('周金枚')}&background=06B6D4&color=fff&size=200&bold=true"
 }
 
 professors_papers = {
@@ -103,31 +110,32 @@ def analyze_results(*answers):
         names = list(filtered_scores.keys())
         values = list(filtered_scores.values())
 
-        # 設定圖表背景顏色也為 #fbfbfb
-        fig, ax = plt.subplots(figsize=(8, 8), facecolor='#fbfbfb')
-        ax.set_facecolor('#fbfbfb')
+        # 設定圖表背景為純白色，徹底消滅黑灰色！
+        fig, ax = plt.subplots(figsize=(8, 8), facecolor='#ffffff')
+        ax.set_facecolor('#ffffff')
+        
+        # 將最高分的區塊微微拉出
         explode = [0.1 if val == max_val else 0 for val in values]
 
-        base_grays = ['#777777', '#999999', '#bbbbbb', '#cccccc', '#dddddd']
-        colors = []
-        gray_idx = 0
-        for val in values:
-            if val == max_val: colors.append('#000000')
-            else:
-                colors.append(base_grays[gray_idx % len(base_grays)])
-                gray_idx += 1
+        # 🎨 全新明亮專業色彩組合 (取代原本的灰暗色調)
+        color_palette = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4']
+        colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
 
         wedges, texts, autotexts = ax.pie(
             values, explode=explode, labels=names, colors=colors,
             autopct='%1.1f%%', startangle=140,
             wedgeprops={'edgecolor': 'white', 'linewidth': 3},
-            textprops={'fontproperties': custom_font, 'fontsize': 16, 'color': '#000'}
+            # 移除了 fontproperties 參數，改用全域設定，確保字體大小能正常運作
+            textprops={'fontsize': 16, 'color': '#000000'}
         )
 
-        ax.set_title('教授學術契合度分佈', fontproperties=custom_font, fontsize=24, fontweight='bold', color='#000', pad=20)
+        ax.set_title('教授學術契合度分佈', fontsize=24, fontweight='bold', color='#000000', pad=20)
+        
+        # 讓圓餅圖裡面的百分比文字顯示為白色粗體
         for autotext in autotexts:
             autotext.set_color('#ffffff')
             autotext.set_fontsize(14)
+            autotext.set_fontweight('bold')
 
         recommended_profs = [p for p, s in scores.items() if s == max_val]
         report_html = "<div style='margin-top: 20px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的主力指導教授</h2>"
@@ -170,8 +178,9 @@ def analyze_results(*answers):
 # 🎨 增強版 CSS：強制清除所有預設的灰底與邊框
 # ==========================================
 css = """
-    body, html, main, .gradio-container, .contain, .wrap { background-color: #fbfbfb !important; }
-    body.dark { background-color: #fbfbfb !important; }
+    /* 確保所有底層容器都是純白背景 */
+    body, html, main, .gradio-container, .contain, .wrap { background-color: #ffffff !important; }
+    body.dark { background-color: #ffffff !important; }
     footer { display: none !important; }
     button[aria-label="Copy"], button[aria-label="Fullscreen"], .svelte-11ht8k, .action-buttons, .copy-button { display: none !important; }
     .gradio-html { border: none !important; box-shadow: none !important; background: transparent !important; }
