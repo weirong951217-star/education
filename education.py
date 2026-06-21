@@ -1,43 +1,13 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.6 終極字體防護版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.7 圖文完美剝離版)
 # ============================================================
 import os
-import urllib.request
 import urllib.parse
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 import gradio as gr
 import traceback
 
-print("⏳ [1/3] 正在執行環境設定與中文字體安全下載...")
-
-# ==========================================
-# 🚀 終極防亂碼機制：改用 Google 官方最穩定的 NotoSansTC TTF
-# ==========================================
-local_font_path = "NotoSansTC-Regular.ttf"
-font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
-
-# 確保字體下載成功
-if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
-    print("⏳ 下載高解析度中文字體中 (確保標題與教授名字正常顯示)...")
-    try:
-        req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=20) as response:
-            with open(local_font_path, 'wb') as f:
-                f.write(response.read())
-        print("✅ 字體下載完成！")
-    except Exception as e:
-        print(f"⚠️ 字體下載失敗: {e}")
-
-# 建立專屬字體物件
-if os.path.exists(local_font_path):
-    custom_font = fm.FontProperties(fname=local_font_path)
-else:
-    custom_font = fm.FontProperties()
-
-plt.rcParams['axes.unicode_minus'] = False
-
-print("⏳ [2/3] 正在載入教授資料庫與問卷...")
+print("⏳ [1/2] 正在載入教授資料庫與問卷...")
 
 professors_info = {
     "蔡介元": {"field": "AI、大數據分析、資料探勘", "intro": "適合喜歡人工智慧、機器學習與資料分析的學生。"},
@@ -92,7 +62,11 @@ def analyze_results(*answers):
     try:
         if not all(answers):
             warning_box = "<div style='background-color: #111; color: #fff; padding: 20px; border-radius: 12px; text-align: center; font-weight: 900; font-size: 18px; margin-bottom: 20px; border: 2px solid #ff4444;'>⚠️ 系統提示：您還有題目尚未作答完畢！請確認 10 題皆已選取後再送出。</div>"
-            return (gr.update(visible=True, value=warning_box), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
+            return (
+                gr.update(visible=True, value=warning_box), 
+                gr.update(visible=True), gr.update(visible=False), 
+                gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
+            )
 
         scores = {name: 0 for name in professors_info}
         for i, ans in enumerate(answers):
@@ -101,14 +75,14 @@ def analyze_results(*answers):
 
         filtered_scores = {k: v for k, v in scores.items() if v > 0}
         max_val = max(filtered_scores.values()) if filtered_scores else 1
-        names = list(filtered_scores.keys())  # 這裡儲存了要顯示在旁邊的教授名字
+        names = list(filtered_scores.keys())
         values = list(filtered_scores.values())
-
-        # 設定圖表背景為純白
-        fig, ax = plt.subplots(figsize=(8, 8), facecolor='#ffffff')
-        ax.set_facecolor('#ffffff')
         
-        explode = [0.1 if val == max_val else 0 for val in values]
+        # 計算百分比
+        total = sum(values)
+        percents = [(val / total) * 100 for val in values]
+
+        # 🎨 色彩配置 (最高分純黑，其餘深淺灰)
         base_grays = ['#bbbbbb', '#999999', '#777777', '#aaaaaa', '#888888']
         colors = []
         gray_idx = 0
@@ -119,34 +93,45 @@ def analyze_results(*answers):
                 colors.append(base_grays[gray_idx % len(base_grays)])
                 gray_idx += 1
 
-        # ==========================================
-        # 📊 圓餅圖繪製：labels=names 就是讓教授名字出現在旁邊
-        # autopct='%1.1f%%' 就是讓 % 數出現在圖表內
-        # ==========================================
-        wedges, texts, autotexts = ax.pie(
-            values, explode=explode, labels=names, colors=colors,
-            autopct='%1.1f%%', startangle=140,
-            wedgeprops={'edgecolor': 'white', 'linewidth': 3}
+        # =========================================================
+        # 📊 1. 產生純淨圓餅圖 (完全不含任何標籤與文字，避免方塊)
+        # =========================================================
+        fig, ax = plt.subplots(figsize=(6, 6), facecolor='#ffffff')
+        ax.set_facecolor('#ffffff')
+        explode = [0.1 if val == max_val else 0 for val in values]
+        
+        ax.pie(
+            values, explode=explode, colors=colors,
+            startangle=140, wedgeprops={'edgecolor': 'white', 'linewidth': 3}
         )
+        
+        # =========================================================
+        # 📝 2. 生成標題 HTML
+        # =========================================================
+        title_html = "<h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 20px; letter-spacing: 2px;'>📊 教授學術契合度分布</h2>"
 
-        # 🌟 強制綁定：把旁邊出現的「教授名字」套用剛下載好的中文字體
-        for text in texts:
-            text.set_fontproperties(custom_font)
-            text.set_fontsize(16)
-            text.set_color('#000000')
+        # =========================================================
+        # 📝 3. 生成右側圖例 HTML (包含色塊、教授名字、百分比)
+        # =========================================================
+        legend_html = "<div style='display: flex; flex-direction: column; justify-content: center; gap: 15px; height: 100%; padding-left: 20px;'>"
+        for name, pct, color, val in zip(names, percents, colors, values):
+            is_top = " (TOP MATCH)" if val == max_val else ""
+            font_weight = "900" if val == max_val else "bold"
+            text_color = "#000" if val == max_val else "#555"
+            
+            legend_html += f"""
+            <div style='display: flex; align-items: center; font-size: 18px; font-weight: {font_weight}; color: {text_color};'>
+                <div style='width: 24px; height: 24px; background-color: {color}; border-radius: 6px; margin-right: 15px; border: 1px solid #ddd;'></div>
+                <span>{name} - {pct:.1f}% <span style='font-size: 12px; color: #ff0055;'>{is_top}</span></span>
+            </div>
+            """
+        legend_html += "</div>"
 
-        # 🌟 強制綁定：把裡面的「% 數」套用剛下載好的中文字體
-        for autotext in autotexts:
-            autotext.set_fontproperties(custom_font)
-            autotext.set_color('#ffffff')
-            autotext.set_fontsize(14)
-            autotext.set_fontweight('bold')
-
-        # 🌟 強制綁定：把你要求的「最上面標題」打上去並套用字體
-        ax.set_title('教授學術契合度分布', fontproperties=custom_font, fontsize=28, color='#000000', pad=20)
-
+        # =========================================================
+        # 📝 4. 生成推薦報告 HTML
+        # =========================================================
         recommended_profs = [p for p, s in scores.items() if s == max_val]
-        report_html = "<div style='margin-top: 20px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的主力指導教授</h2>"
+        report_html = "<div style='margin-top: 40px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的主力指導教授</h2>"
 
         for prof in recommended_profs:
             info = professors_info[prof]
@@ -176,12 +161,21 @@ def analyze_results(*answers):
             for paper in professors_papers[prof]: report_html += f"<li style='margin-bottom: 8px;'>{paper}</li>"
             report_html += f"</ul></div><div style='text-align: right; margin-top: 10px;'><a href='{ndltd_url}' target='_blank' style='display:inline-block; padding:14px 28px; background-color:#000; color:#fff; text-decoration:none; border-radius:50px; font-weight:900; font-size:15px; border:2px solid #000; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: all 0.2s;' onmouseover=\"this.style.transform='translateY(-2px)';\" onmouseout=\"this.style.transform='translateY(0)';\">🔍 前往博碩士論文網搜尋此教授</a></div></div>"
         report_html += "</div>"
-        return (gr.update(visible=False, value=""), gr.update(visible=False), gr.update(visible=True), fig, report_html)
+        
+        plt.close(fig) # 釋放記憶體
+        return (gr.update(visible=False, value=""), gr.update(visible=False), gr.update(visible=True), title_html, fig, legend_html, report_html)
     except Exception as e:
         error_msg = traceback.format_exc()
         crash_html = f"<div style='color: red; padding: 20px; border: 2px solid red; background: #ffe6e6;'><h3>後端發生異常錯誤</h3><pre>{error_msg}</pre></div>"
-        return (gr.update(visible=True, value=crash_html), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
+        return (
+            gr.update(visible=True, value=crash_html), 
+            gr.update(visible=True), gr.update(visible=False), 
+            gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
+        )
 
+# ==========================================
+# 🎨 增強版 CSS：確保背景乾淨、圖表排版漂亮
+# ==========================================
 css = """
     body, html, main, .gradio-container, .contain, .wrap { background-color: #ffffff !important; }
     body.dark { background-color: #ffffff !important; }
@@ -209,10 +203,14 @@ css = """
 
 js_func = "function() { document.body.classList.remove('dark'); }"
 
+print("⏳ [2/2] 正在建置使用者介面...")
+
 with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
     gr.HTML("<div style='text-align: center; margin-top: 50px; margin-bottom: 40px;'><div style='text-transform: uppercase; font-size: 15px; color: #555; font-weight: 900; letter-spacing: 6px; margin-bottom: 12px;'>YuanZe IEM // Education Board</div><h1 style='font-size: 4.5rem; font-weight: 900; color: #000; margin: 0; letter-spacing: -2px;'>EDUCATION®</h1></div>")
     radio_inputs = []
+    
     with gr.Row(elem_id="main-layout"):
+        # 測驗區塊
         with gr.Column(elem_classes="quiz-panel", visible=True) as quiz_col:
             error_msg = gr.HTML(visible=False, elem_classes="gradio-html")
             gr.HTML("<h3 style='font-size: 26px; font-weight: 900; color: #000; margin-bottom: 10px; border-left: 6px solid #000; padding-left: 15px;'>📝 專題教授適性測驗</h3><p style='font-size: 16px; color: #555; font-weight: bold; margin-bottom: 30px; padding-left: 15px;'>請完成下方 10 題測驗，系統將自動為您生成推薦分析報表。</p>")
@@ -228,15 +226,40 @@ with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
                     for q in questions[6:10]: radio_inputs.append(gr.Radio(choices=list(q["options"].keys()), label=q["q"], elem_classes="gradio-radio"))
             submit_btn = gr.Button("🚀 提交並生成專屬推薦報表", elem_classes="btn-submit")
 
+        # 結果區塊
         with gr.Column(visible=False, elem_classes="quiz-panel") as result_col:
-            plot_output = gr.Plot(show_label=False)
+            # 1. HTML 標題
+            chart_title = gr.HTML(elem_classes="gradio-html")
+            
+            # 2. 將圓餅圖與 HTML 圖例並排顯示
+            with gr.Row():
+                with gr.Column(scale=1):
+                    plot_output = gr.Plot(show_label=False)
+                with gr.Column(scale=1):
+                    legend_output = gr.HTML(elem_classes="gradio-html")
+            
+            # 3. 推薦教授詳細資料
             html_output = gr.HTML(elem_classes="gradio-html")
             reset_btn = gr.Button("🔄 重新進行測驗", elem_classes="btn-submit")
 
-    submit_btn.click(fn=analyze_results, inputs=radio_inputs, outputs=[error_msg, quiz_col, result_col, plot_output, html_output])
-    reset_btn.click(fn=lambda: (gr.update(visible=False, value=""), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value="")), inputs=None, outputs=[error_msg, quiz_col, result_col, plot_output, html_output])
+    # 綁定按鈕事件 (注意 outputs 對應數量的修改)
+    submit_btn.click(
+        fn=analyze_results, 
+        inputs=radio_inputs, 
+        outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, legend_output, html_output]
+    )
+    
+    reset_btn.click(
+        fn=lambda: (
+            gr.update(visible=False, value=""), 
+            gr.update(visible=True), gr.update(visible=False), 
+            gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
+        ), 
+        inputs=None, 
+        outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, legend_output, html_output]
+    )
 
-print("⏳ [3/3] 正在啟動專屬網頁伺服器...")
+print("✅ 啟動專屬網頁伺服器...")
 
 port = int(os.environ.get("PORT", 7860))
 app.launch(server_name="0.0.0.0", server_port=port)
