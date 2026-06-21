@@ -1,33 +1,34 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.0 鮮豔色彩與全名單顯示版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.1 終極完美圖表與防亂碼版)
 # ============================================================
 import os
-import urllib.request
+import requests
 import urllib.parse
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import gradio as gr
 import traceback
 
-print("⏳ [1/3] 正在執行環境設定與中文字體安全下載...")
+print("⏳ [1/3] 正在執行環境設定與中文字體強制下載...")
 
 # ==========================================
-# 🚀 終極防亂碼機制：確保抓取 Google 官方 Noto Sans TC
+# 🚀 終極防亂碼機制：改用 requests 強制下載字體，突破 Render 網路限制
 # ==========================================
 local_font_path = "NotoSansTC-Regular.ttf"
 font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
 
 if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
-    print("⏳ 下載高解析度中文字體中...")
+    print("⏳ 正在強制下載高解析度中文字體中...")
     try:
-        req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=20) as response:
-            with open(local_font_path, 'wb') as f:
-                f.write(response.read())
+        response = requests.get(font_url, timeout=20)
+        response.raise_for_status() # 確認下載成功
+        with open(local_font_path, 'wb') as f:
+            f.write(response.content)
         print("✅ 字體下載完成！")
     except Exception as e:
         print(f"⚠️ 字體下載失敗: {e}")
 
+# 建立專屬字體物件 (準備強制綁定給圓餅圖的每一個文字)
 if os.path.exists(local_font_path):
     custom_font = fm.FontProperties(fname=local_font_path)
 else:
@@ -90,7 +91,11 @@ def analyze_results(*answers):
     try:
         if not all(answers):
             warning_box = "<div style='background-color: #111; color: #fff; padding: 20px; border-radius: 12px; text-align: center; font-weight: 900; font-size: 18px; margin-bottom: 20px; border: 2px solid #ff4444;'>⚠️ 系統提示：您還有題目尚未作答完畢！請確認 10 題皆已選取後再送出。</div>"
-            return (gr.update(visible=True, value=warning_box), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
+            return (
+                gr.update(visible=True, value=warning_box), 
+                gr.update(visible=True), gr.update(visible=False), 
+                gr.update(value=""), gr.update(value=None), gr.update(value="")
+            )
 
         scores = {name: 0 for name in professors_info}
         for i, ans in enumerate(answers):
@@ -100,13 +105,13 @@ def analyze_results(*answers):
         # 🌟 過濾出所有得分大於 0 的教授
         filtered_scores = {k: v for k, v in scores.items() if v > 0}
         
-        # 🌟 依照分數由高到低排序，這樣圓餅圖跟下面的列表才會按比例排好
+        # 依照分數由高到低排序
         sorted_profs = sorted(filtered_scores.items(), key=lambda x: x[1], reverse=True)
         names = [prof for prof, score in sorted_profs]
         values = [score for prof, score in sorted_profs]
         max_val = values[0] if values else 1
 
-        # 🎨 回歸鮮豔亮眼的色彩配置！
+        # 🎨 鮮豔色彩配置
         color_palette = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6', '#06B6D4']
         colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
 
@@ -116,7 +121,7 @@ def analyze_results(*answers):
         # 將最高分的那一塊稍微凸顯
         explode = [0.08 if val == max_val else 0 for val in values]
 
-        # 📊 繪製圓餅圖：labels(名字在外), autopct(%在內)
+        # 📊 繪製圓餅圖：教授名字在外 (labels)，百分比在內 (autopct)
         wedges, texts, autotexts = ax.pie(
             values, explode=explode, labels=names, colors=colors,
             autopct='%1.1f%%', startangle=140,
@@ -126,7 +131,7 @@ def analyze_results(*answers):
         # 🌟 強制綁定字體給外圍的「教授名字」
         for text in texts:
             text.set_fontproperties(custom_font)
-            text.set_fontsize(16)
+            text.set_fontsize(18)  # 稍微放大教授名字
             text.set_color('#000000')
             text.set_fontweight('bold')
 
@@ -137,10 +142,11 @@ def analyze_results(*answers):
             autotext.set_fontsize(16)
             autotext.set_fontweight('bold')
 
-        ax.set_title('教授學術契合度分布', fontproperties=custom_font, fontsize=26, fontweight='bold', color='#000000', pad=20)
+        # 將「教授學術契合度分布」大標題用 HTML 生成在圖表正上方
+        chart_title_html = "<h2 style='text-align: center; color: #000; font-weight: 900; font-size: 32px; margin-bottom: 10px; letter-spacing: 2px;'>📊 教授學術契合度分布</h2>"
 
-        # 🌟 這裡修改為：只要有得分的教授都會出現在下方列表！
-        report_html = "<div style='margin-top: 20px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的指導教授分析</h2>"
+        # 生成下方所有教授的詳細推薦名單
+        report_html = "<div style='margin-top: 40px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的指導教授分析</h2>"
 
         for prof, score in sorted_profs:
             info = professors_info[prof]
@@ -180,14 +186,23 @@ def analyze_results(*answers):
         
         report_html += "</div>"
         
-        return (gr.update(visible=False, value=""), gr.update(visible=False), gr.update(visible=True), fig, report_html)
+        return (
+            gr.update(visible=False, value=""), 
+            gr.update(visible=False), 
+            gr.update(visible=True), 
+            chart_title_html, fig, report_html
+        )
     except Exception as e:
         error_msg = traceback.format_exc()
         crash_html = f"<div style='color: red; padding: 20px; border: 2px solid red; background: #ffe6e6;'><h3>後端發生異常錯誤</h3><pre>{error_msg}</pre></div>"
-        return (gr.update(visible=True, value=crash_html), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
+        return (
+            gr.update(visible=True, value=crash_html), 
+            gr.update(visible=True), gr.update(visible=False), 
+            gr.update(value=""), gr.update(value=None), gr.update(value="")
+        )
 
 # ==========================================
-# 🎨 增強版 CSS：確保背景乾淨、圖表排版漂亮
+# 🎨 增強版 CSS：確保背景乾淨、排版漂亮
 # ==========================================
 css = """
     body, html, main, .gradio-container, .contain, .wrap { background-color: #fbfbfb !important; }
@@ -216,6 +231,8 @@ css = """
 
 js_func = "function() { document.body.classList.remove('dark'); }"
 
+print("⏳ [3/3] 正在建置使用者介面...")
+
 with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
     gr.HTML("<div style='text-align: center; margin-top: 50px; margin-bottom: 40px;'><div style='text-transform: uppercase; font-size: 15px; color: #555; font-weight: 900; letter-spacing: 6px; margin-bottom: 12px;'>YuanZe IEM // Education Board</div><h1 style='font-size: 4.5rem; font-weight: 900; color: #000; margin: 0; letter-spacing: -2px;'>EDUCATION®</h1></div>")
     radio_inputs = []
@@ -237,14 +254,16 @@ with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
             submit_btn = gr.Button("🚀 提交並生成專屬推薦報表", elem_classes="btn-submit")
 
         with gr.Column(visible=False, elem_classes="quiz-panel") as result_col:
+            # 加入「教授學術契合度分布」大標題
+            chart_title = gr.HTML(elem_classes="gradio-html")
             plot_output = gr.Plot(show_label=False)
             html_output = gr.HTML(elem_classes="gradio-html")
             reset_btn = gr.Button("🔄 重新進行測驗", elem_classes="btn-submit")
 
-    submit_btn.click(fn=analyze_results, inputs=radio_inputs, outputs=[error_msg, quiz_col, result_col, plot_output, html_output])
-    reset_btn.click(fn=lambda: (gr.update(visible=False, value=""), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value="")), inputs=None, outputs=[error_msg, quiz_col, result_col, plot_output, html_output])
+    submit_btn.click(fn=analyze_results, inputs=radio_inputs, outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, html_output])
+    reset_btn.click(fn=lambda: (gr.update(visible=False, value=""), gr.update(visible=True), gr.update(visible=False), gr.update(value=""), gr.update(value=None), gr.update(value="")), inputs=None, outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, html_output])
 
-print("⏳ [3/3] 正在啟動專屬網頁伺服器...")
+print("✅ 啟動專屬網頁伺服器...")
 
 port = int(os.environ.get("PORT", 7860))
 app.launch(server_name="0.0.0.0", server_port=port)
