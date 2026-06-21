@@ -1,5 +1,5 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.3 終極防亂碼與高顏值版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.4 強制字體綁定版)
 # ============================================================
 import os
 import urllib.request
@@ -12,34 +12,27 @@ import traceback
 print("⏳ [1/3] 正在執行環境設定與中文字體安全下載...")
 
 # ==========================================
-# 🚀 終極防亂碼機制：帶有 User-Agent 的安全下載
-# 確保下載到真正的字體檔，而非被阻擋的錯誤網頁
+# 🚀 確保中文字體存在
 # ==========================================
 local_font_path = "TaipeiSansTCBeta-Regular.ttf"
 font_url = "https://raw.githubusercontent.com/halfrost/Halfrost-Field/master/contents/Machine_Learning/TaipeiSansTCBeta-Regular.ttf"
 
-# 檢查檔案是否存在，且大小必須大於 1MB (確保不是抓到錯誤網頁)
 if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
-    print("⏳ 系統偵測不到有效中文字體，啟動安全下載中...")
+    print("⏳ 下載中文字體中...")
     try:
-        # 偽裝成瀏覽器，避免被 GitHub 阻擋
-        req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=15) as response:
             with open(local_font_path, 'wb') as f:
                 f.write(response.read())
         print("✅ 字體下載完成！")
     except Exception as e:
-        print(f"⚠️ 字體下載失敗，錯誤訊息: {e}")
+        print(f"⚠️ 字體下載失敗: {e}")
 
-# 將字體註冊進 Matplotlib 系統中
+# 建立專屬字體物件 (準備強制綁定給每一個文字)
 if os.path.exists(local_font_path) and os.path.getsize(local_font_path) > 1000000:
-    fm.fontManager.addfont(local_font_path)
     custom_font = fm.FontProperties(fname=local_font_path)
-    # 全域設定字體，這樣底下就不需要每個物件都綁定 fontproperties
-    plt.rcParams['font.sans-serif'] = [custom_font.get_name(), 'sans-serif']
 else:
-    print("⚠️ 警告：無法載入中文字體，可能顯示為方塊。")
-    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    custom_font = fm.FontProperties()
 
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -110,32 +103,36 @@ def analyze_results(*answers):
         names = list(filtered_scores.keys())
         values = list(filtered_scores.values())
 
-        # 設定圖表背景為純白色，徹底消滅黑灰色！
+        # 設定圖表背景為純白色
         fig, ax = plt.subplots(figsize=(8, 8), facecolor='#ffffff')
         ax.set_facecolor('#ffffff')
         
-        # 將最高分的區塊微微拉出
         explode = [0.1 if val == max_val else 0 for val in values]
-
-        # 🎨 全新明亮專業色彩組合 (取代原本的灰暗色調)
         color_palette = ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4']
         colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
 
+        # 繪製圓餅圖 (包含教授名字與百分比)
         wedges, texts, autotexts = ax.pie(
             values, explode=explode, labels=names, colors=colors,
             autopct='%1.1f%%', startangle=140,
-            wedgeprops={'edgecolor': 'white', 'linewidth': 3},
-            # 移除了 fontproperties 參數，改用全域設定，確保字體大小能正常運作
-            textprops={'fontsize': 16, 'color': '#000000'}
+            wedgeprops={'edgecolor': 'white', 'linewidth': 3}
         )
 
-        ax.set_title('教授學術契合度分佈', fontsize=24, fontweight='bold', color='#000000', pad=20)
-        
-        # 讓圓餅圖裡面的百分比文字顯示為白色粗體
+        # 🌟 關鍵修復：強制將每一個「教授名字」套用中文字體
+        for text in texts:
+            text.set_fontproperties(custom_font)
+            text.set_fontsize(16)
+            text.set_color('#000000')
+
+        # 🌟 關鍵修復：強制將每一個「百分比」設定樣式
         for autotext in autotexts:
+            autotext.set_fontproperties(custom_font)
             autotext.set_color('#ffffff')
-            autotext.set_fontsize(14)
+            autotext.set_fontsize(15)
             autotext.set_fontweight('bold')
+
+        # 🌟 關鍵修復：強制將最上面的「標題」套用中文字體
+        ax.set_title('教授學術契合度分佈', fontproperties=custom_font, fontsize=26, fontweight='bold', color='#000000', pad=20)
 
         recommended_profs = [p for p, s in scores.items() if s == max_val]
         report_html = "<div style='margin-top: 20px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的主力指導教授</h2>"
@@ -174,18 +171,13 @@ def analyze_results(*answers):
         crash_html = f"<div style='color: red; padding: 20px; border: 2px solid red; background: #ffe6e6;'><h3>後端發生異常錯誤</h3><pre>{error_msg}</pre></div>"
         return (gr.update(visible=True, value=crash_html), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
 
-# ==========================================
-# 🎨 增強版 CSS：強制清除所有預設的灰底與邊框
-# ==========================================
 css = """
-    /* 確保所有底層容器都是純白背景 */
     body, html, main, .gradio-container, .contain, .wrap { background-color: #ffffff !important; }
     body.dark { background-color: #ffffff !important; }
     footer { display: none !important; }
     button[aria-label="Copy"], button[aria-label="Fullscreen"], .svelte-11ht8k, .action-buttons, .copy-button { display: none !important; }
     .gradio-html { border: none !important; box-shadow: none !important; background: transparent !important; }
     
-    /* 清除表單與區塊的預設灰色背景 */
     .form, .panel, .block, .svelte-112innx { background-color: transparent !important; border: none !important; box-shadow: none !important; }
     #main-layout { background-color: transparent !important; }
 
