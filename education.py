@@ -1,13 +1,41 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v5.7 圖文完美剝離版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.0 鮮豔色彩與全名單顯示版)
 # ============================================================
 import os
+import urllib.request
 import urllib.parse
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import gradio as gr
 import traceback
 
-print("⏳ [1/2] 正在載入教授資料庫與問卷...")
+print("⏳ [1/3] 正在執行環境設定與中文字體安全下載...")
+
+# ==========================================
+# 🚀 終極防亂碼機制：確保抓取 Google 官方 Noto Sans TC
+# ==========================================
+local_font_path = "NotoSansTC-Regular.ttf"
+font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
+
+if not os.path.exists(local_font_path) or os.path.getsize(local_font_path) < 1000000:
+    print("⏳ 下載高解析度中文字體中...")
+    try:
+        req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            with open(local_font_path, 'wb') as f:
+                f.write(response.read())
+        print("✅ 字體下載完成！")
+    except Exception as e:
+        print(f"⚠️ 字體下載失敗: {e}")
+
+if os.path.exists(local_font_path):
+    custom_font = fm.FontProperties(fname=local_font_path)
+else:
+    custom_font = fm.FontProperties()
+
+plt.rcParams['axes.unicode_minus'] = False
+
+print("⏳ [2/3] 正在載入教授資料庫與問卷...")
 
 professors_info = {
     "蔡介元": {"field": "AI、大數據分析、資料探勘", "intro": "適合喜歡人工智慧、機器學習與資料分析的學生。"},
@@ -28,12 +56,12 @@ professors_reqs = {
 }
 
 professors_photos = {
-    "蔡介元": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡介元')}&background=000000&color=fff&size=200&bold=true",
-    "呂卓勲": f"https://ui-avatars.com/api/?name={urllib.parse.quote('呂卓勲')}&background=000000&color=fff&size=200&bold=true",
-    "蔡啟揚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡啟揚')}&background=000000&color=fff&size=200&bold=true",
-    "潘劍輝": f"https://ui-avatars.com/api/?name={urllib.parse.quote('潘劍輝')}&background=000000&color=fff&size=200&bold=true",
-    "林瑞豐": f"https://ui-avatars.com/api/?name={urllib.parse.quote('林瑞豐')}&background=000000&color=fff&size=200&bold=true",
-    "周金枚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('周金枚')}&background=000000&color=fff&size=200&bold=true"
+    "蔡介元": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡介元')}&background=4F46E5&color=fff&size=200&bold=true",
+    "呂卓勲": f"https://ui-avatars.com/api/?name={urllib.parse.quote('呂卓勲')}&background=10B981&color=fff&size=200&bold=true",
+    "蔡啟揚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('蔡啟揚')}&background=F59E0B&color=fff&size=200&bold=true",
+    "潘劍輝": f"https://ui-avatars.com/api/?name={urllib.parse.quote('潘劍輝')}&background=EC4899&color=fff&size=200&bold=true",
+    "林瑞豐": f"https://ui-avatars.com/api/?name={urllib.parse.quote('林瑞豐')}&background=8B5CF6&color=fff&size=200&bold=true",
+    "周金枚": f"https://ui-avatars.com/api/?name={urllib.parse.quote('周金枚')}&background=06B6D4&color=fff&size=200&bold=true"
 }
 
 professors_papers = {
@@ -62,123 +90,108 @@ def analyze_results(*answers):
     try:
         if not all(answers):
             warning_box = "<div style='background-color: #111; color: #fff; padding: 20px; border-radius: 12px; text-align: center; font-weight: 900; font-size: 18px; margin-bottom: 20px; border: 2px solid #ff4444;'>⚠️ 系統提示：您還有題目尚未作答完畢！請確認 10 題皆已選取後再送出。</div>"
-            return (
-                gr.update(visible=True, value=warning_box), 
-                gr.update(visible=True), gr.update(visible=False), 
-                gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
-            )
+            return (gr.update(visible=True, value=warning_box), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
 
         scores = {name: 0 for name in professors_info}
         for i, ans in enumerate(answers):
             prof_name = questions[i]["options"][ans]
             scores[prof_name] += 1
 
+        # 🌟 過濾出所有得分大於 0 的教授
         filtered_scores = {k: v for k, v in scores.items() if v > 0}
-        max_val = max(filtered_scores.values()) if filtered_scores else 1
-        names = list(filtered_scores.keys())
-        values = list(filtered_scores.values())
         
-        # 計算百分比
-        total = sum(values)
-        percents = [(val / total) * 100 for val in values]
+        # 🌟 依照分數由高到低排序，這樣圓餅圖跟下面的列表才會按比例排好
+        sorted_profs = sorted(filtered_scores.items(), key=lambda x: x[1], reverse=True)
+        names = [prof for prof, score in sorted_profs]
+        values = [score for prof, score in sorted_profs]
+        max_val = values[0] if values else 1
 
-        # 🎨 色彩配置 (最高分純黑，其餘深淺灰)
-        base_grays = ['#bbbbbb', '#999999', '#777777', '#aaaaaa', '#888888']
-        colors = []
-        gray_idx = 0
-        for val in values:
-            if val == max_val:
-                colors.append('#000000')
-            else:
-                colors.append(base_grays[gray_idx % len(base_grays)])
-                gray_idx += 1
+        # 🎨 回歸鮮豔亮眼的色彩配置！
+        color_palette = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6', '#06B6D4']
+        colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
 
-        # =========================================================
-        # 📊 1. 產生純淨圓餅圖 (完全不含任何標籤與文字，避免方塊)
-        # =========================================================
-        fig, ax = plt.subplots(figsize=(6, 6), facecolor='#ffffff')
-        ax.set_facecolor('#ffffff')
-        explode = [0.1 if val == max_val else 0 for val in values]
+        fig, ax = plt.subplots(figsize=(8, 8), facecolor='#fbfbfb')
+        ax.set_facecolor('#fbfbfb')
         
-        ax.pie(
-            values, explode=explode, colors=colors,
-            startangle=140, wedgeprops={'edgecolor': 'white', 'linewidth': 3}
+        # 將最高分的那一塊稍微凸顯
+        explode = [0.08 if val == max_val else 0 for val in values]
+
+        # 📊 繪製圓餅圖：labels(名字在外), autopct(%在內)
+        wedges, texts, autotexts = ax.pie(
+            values, explode=explode, labels=names, colors=colors,
+            autopct='%1.1f%%', startangle=140,
+            wedgeprops={'edgecolor': 'white', 'linewidth': 3}
         )
-        
-        # =========================================================
-        # 📝 2. 生成標題 HTML
-        # =========================================================
-        title_html = "<h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 20px; letter-spacing: 2px;'>📊 教授學術契合度分布</h2>"
 
-        # =========================================================
-        # 📝 3. 生成右側圖例 HTML (包含色塊、教授名字、百分比)
-        # =========================================================
-        legend_html = "<div style='display: flex; flex-direction: column; justify-content: center; gap: 15px; height: 100%; padding-left: 20px;'>"
-        for name, pct, color, val in zip(names, percents, colors, values):
-            is_top = " (TOP MATCH)" if val == max_val else ""
-            font_weight = "900" if val == max_val else "bold"
-            text_color = "#000" if val == max_val else "#555"
-            
-            legend_html += f"""
-            <div style='display: flex; align-items: center; font-size: 18px; font-weight: {font_weight}; color: {text_color};'>
-                <div style='width: 24px; height: 24px; background-color: {color}; border-radius: 6px; margin-right: 15px; border: 1px solid #ddd;'></div>
-                <span>{name} - {pct:.1f}% <span style='font-size: 12px; color: #ff0055;'>{is_top}</span></span>
-            </div>
-            """
-        legend_html += "</div>"
+        # 🌟 強制綁定字體給外圍的「教授名字」
+        for text in texts:
+            text.set_fontproperties(custom_font)
+            text.set_fontsize(16)
+            text.set_color('#000000')
+            text.set_fontweight('bold')
 
-        # =========================================================
-        # 📝 4. 生成推薦報告 HTML
-        # =========================================================
-        recommended_profs = [p for p, s in scores.items() if s == max_val]
-        report_html = "<div style='margin-top: 40px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的主力指導教授</h2>"
+        # 🌟 強制綁定字體給內部的「百分比」
+        for autotext in autotexts:
+            autotext.set_fontproperties(custom_font)
+            autotext.set_color('#ffffff')
+            autotext.set_fontsize(16)
+            autotext.set_fontweight('bold')
 
-        for prof in recommended_profs:
+        ax.set_title('教授學術契合度分布', fontproperties=custom_font, fontsize=26, fontweight='bold', color='#000000', pad=20)
+
+        # 🌟 這裡修改為：只要有得分的教授都會出現在下方列表！
+        report_html = "<div style='margin-top: 20px;'><h2 style='text-align: center; color: #000; font-weight: 900; font-size: 28px; margin-bottom: 30px; letter-spacing: 2px;'>🎯 為您推薦的指導教授分析</h2>"
+
+        for prof, score in sorted_profs:
             info = professors_info[prof]
             reqs = professors_reqs[prof]
             photo_url = professors_photos[prof]
             ndltd_url = f"https://www.google.com/search?q={urllib.parse.quote(f'site:ndltd.ncl.edu.tw \"{prof}\" 元智大學 工業工程與管理')}"
 
+            # 🎖️ 如果是最高分，給予紅色大標籤與黑底粗框；否則給予灰色標籤
+            if score == max_val:
+                badge_html = "<span style='font-weight: 900; color: #fff; font-size: 13px; background: #E11D48; padding: 6px 16px; border-radius: 30px; letter-spacing: 2px;'>⭐ TOP MATCH (首選推薦)</span>"
+                border_style = "border: 4px solid #000;"
+            else:
+                badge_html = "<span style='font-weight: 900; color: #555; font-size: 13px; background: #e5e7eb; padding: 6px 16px; border-radius: 30px; letter-spacing: 2px;'>👍 RECOMMENDED (次要推薦)</span>"
+                border_style = "border: 2px solid #ccc;"
+
             report_html += f"""
-            <div style='background: #fff; border: 3px solid #000; border-radius: 20px; padding: 35px; margin-bottom: 40px; box-shadow: 6px 6px 0px #000; position: relative; overflow: hidden;'>
+            <div style='background: #fff; {border_style} border-radius: 20px; padding: 35px; margin-bottom: 40px; box-shadow: 6px 6px 0px rgba(0,0,0,0.1); position: relative; overflow: hidden;'>
                 <div style='display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #eaeaea; padding-bottom: 30px;'>
-                    <div style='width: 140px; height: 140px; border-radius: 50%; border: 4px solid #000; box-shadow: 0 8px 20px rgba(0,0,0,0.15); overflow: hidden; margin-bottom: 20px;'><img src='{photo_url}' style='width: 100%; height: 100%; object-fit: cover;'></div>
-                    <div style='text-align: center;'><h3 style='margin: 0 0 10px 0; color: #000; font-size: 34px; font-weight: 900; letter-spacing: 1px;'>{prof} <span style='font-size: 22px; color: #555;'>教授</span></h3><span style='font-weight: 900; color: #fff; font-size: 13px; background: #000; padding: 6px 16px; border-radius: 30px; letter-spacing: 2px;'>TOP MATCH</span></div>
+                    <div style='width: 140px; height: 140px; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.15); overflow: hidden; margin-bottom: 20px;'><img src='{photo_url}' style='width: 100%; height: 100%; object-fit: cover;'></div>
+                    <div style='text-align: center;'><h3 style='margin: 0 0 12px 0; color: #000; font-size: 34px; font-weight: 900; letter-spacing: 1px;'>{prof} <span style='font-size: 22px; color: #555;'>教授</span></h3>{badge_html}</div>
                 </div>
                 <div style='margin-bottom: 25px;'>
-                    <p style='color: #000; font-size: 17px; margin: 15px 0; line-height: 1.6;'><b style='background: #eee; padding: 6px 12px; border-radius: 8px; margin-right: 12px; display: inline-block;'>📖 研究領域</b> {info['field']}</p>
-                    <p style='color: #000; font-size: 17px; margin: 15px 0; line-height: 1.6;'><b style='background: #eee; padding: 6px 12px; border-radius: 8px; margin-right: 12px; display: inline-block;'>💡 適合對象</b> {info['intro']}</p>
+                    <p style='color: #000; font-size: 17px; margin: 15px 0; line-height: 1.6;'><b style='background: #f3f4f6; padding: 6px 12px; border-radius: 8px; margin-right: 12px; display: inline-block;'>📖 研究領域</b> {info['field']}</p>
+                    <p style='color: #000; font-size: 17px; margin: 15px 0; line-height: 1.6;'><b style='background: #f3f4f6; padding: 6px 12px; border-radius: 8px; margin-right: 12px; display: inline-block;'>💡 適合對象</b> {info['intro']}</p>
                 </div>
                 <div style='background: #fafafa; border-radius: 12px; padding: 20px; border: 2px dashed #bbb; margin-bottom: 30px;'>
                     <h4 style='color: #000; font-weight: 900; font-size: 16px; margin-top: 0; margin-bottom: 12px;'>⚠️ 先修課程與能力門檻評估</h4>
-                    <p style='color: #222; font-size: 15px; margin: 10px 0; line-height: 1.6;'><b style='background: #000; color: #fff; padding: 4px 10px; border-radius: 6px; margin-right: 10px; font-size: 13px;'>建議先修</b> {reqs['course']}</p>
-                    <p style='color: #222; font-size: 15px; margin: 10px 0; line-height: 1.6;'><b style='background: #000; color: #fff; padding: 4px 10px; border-radius: 6px; margin-right: 10px; font-size: 13px;'>核心能力</b> {reqs['skill']}</p>
+                    <p style='color: #222; font-size: 15px; margin: 10px 0; line-height: 1.6;'><b style='background: #111; color: #fff; padding: 4px 10px; border-radius: 6px; margin-right: 10px; font-size: 13px;'>建議先修</b> {reqs['course']}</p>
+                    <p style='color: #222; font-size: 15px; margin: 10px 0; line-height: 1.6;'><b style='background: #111; color: #fff; padding: 4px 10px; border-radius: 6px; margin-right: 10px; font-size: 13px;'>核心能力</b> {reqs['skill']}</p>
                 </div>
                 <div style='background: #fcfcfc; border-radius: 15px; padding: 25px; border: 2px solid #eee; margin-bottom: 30px;'>
                     <h4 style='color: #000; font-weight: 900; font-size: 18px; margin-top: 0; margin-bottom: 20px; border-left: 6px solid #000; padding-left: 12px;'>📚 歷年指導論文庫 (精選)</h4>
                     <ul style='color: #444; padding-left: 25px; list-style-type: decimal; line-height: 1.9; font-size: 15px; font-weight: bold; margin: 0;'>
             """
             for paper in professors_papers[prof]: report_html += f"<li style='margin-bottom: 8px;'>{paper}</li>"
-            report_html += f"</ul></div><div style='text-align: right; margin-top: 10px;'><a href='{ndltd_url}' target='_blank' style='display:inline-block; padding:14px 28px; background-color:#000; color:#fff; text-decoration:none; border-radius:50px; font-weight:900; font-size:15px; border:2px solid #000; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: all 0.2s;' onmouseover=\"this.style.transform='translateY(-2px)';\" onmouseout=\"this.style.transform='translateY(0)';\">🔍 前往博碩士論文網搜尋此教授</a></div></div>"
+            report_html += f"</ul></div><div style='text-align: right; margin-top: 10px;'><a href='{ndltd_url}' target='_blank' style='display:inline-block; padding:14px 28px; background-color:#111; color:#fff; text-decoration:none; border-radius:50px; font-weight:900; font-size:15px; border:2px solid #111; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: all 0.2s;' onmouseover=\"this.style.transform='translateY(-2px)';\" onmouseout=\"this.style.transform='translateY(0)';\">🔍 前往博碩士論文網搜尋此教授</a></div></div>"
+        
         report_html += "</div>"
         
-        plt.close(fig) # 釋放記憶體
-        return (gr.update(visible=False, value=""), gr.update(visible=False), gr.update(visible=True), title_html, fig, legend_html, report_html)
+        return (gr.update(visible=False, value=""), gr.update(visible=False), gr.update(visible=True), fig, report_html)
     except Exception as e:
         error_msg = traceback.format_exc()
         crash_html = f"<div style='color: red; padding: 20px; border: 2px solid red; background: #ffe6e6;'><h3>後端發生異常錯誤</h3><pre>{error_msg}</pre></div>"
-        return (
-            gr.update(visible=True, value=crash_html), 
-            gr.update(visible=True), gr.update(visible=False), 
-            gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
-        )
+        return (gr.update(visible=True, value=crash_html), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value=""))
 
 # ==========================================
 # 🎨 增強版 CSS：確保背景乾淨、圖表排版漂亮
 # ==========================================
 css = """
-    body, html, main, .gradio-container, .contain, .wrap { background-color: #ffffff !important; }
-    body.dark { background-color: #ffffff !important; }
+    body, html, main, .gradio-container, .contain, .wrap { background-color: #fbfbfb !important; }
+    body.dark { background-color: #fbfbfb !important; }
     footer { display: none !important; }
     button[aria-label="Copy"], button[aria-label="Fullscreen"], .svelte-11ht8k, .action-buttons, .copy-button { display: none !important; }
     .gradio-html { border: none !important; box-shadow: none !important; background: transparent !important; }
@@ -186,31 +199,28 @@ css = """
     .form, .panel, .block, .svelte-112innx { background-color: transparent !important; border: none !important; box-shadow: none !important; }
     #main-layout { background-color: transparent !important; }
 
-    .quiz-panel { background: #ffffff !important; border: 3px solid #000 !important; border-radius: 1.5rem !important; padding: 40px !important; box-shadow: 6px 6px 0px #000 !important; }
+    .quiz-panel { background: #ffffff !important; border: 3px solid #000 !important; border-radius: 1.5rem !important; padding: 40px !important; box-shadow: 6px 6px 0px rgba(0,0,0,0.1) !important; }
     .gradio-radio { background: transparent !important; border: none !important; box-shadow: none !important; margin-bottom: 30px !important; }
     .gradio-radio > span { font-size: 22px !important; font-weight: 900 !important; color: #000000 !important; margin-bottom: 15px !important; display: block !important; }
     .gradio-radio label { background-color: #fff !important; border: 2px solid #e0e0e0 !important; border-radius: 12px !important; padding: 12px 20px !important; cursor: pointer !important; transition: all 0.2s ease !important; }
     .gradio-radio label span { font-weight: bold !important; font-size: 15px !important; color: #555 !important; }
     .gradio-radio label:hover { border-color: #000 !important; transform: translateY(-2px); }
-    .gradio-radio label:has(input:checked) { background-color: #000 !important; border-color: #000 !important; box-shadow: 3px 3px 0px #e0e0e0 !important; }
+    .gradio-radio label:has(input:checked) { background-color: #111 !important; border-color: #111 !important; box-shadow: 3px 3px 0px #e0e0e0 !important; }
     .gradio-radio label:has(input:checked) span { color: #fff !important; }
     .tabs { border-bottom: 3px solid #000 !important; margin-bottom: 25px !important; }
     .tab-nav button { font-weight: 900 !important; font-size: 16px !important; color: #888 !important; border: none !important; padding: 15px 25px !important; background: transparent !important; }
     .tab-nav button.selected { color: #000 !important; border-bottom: 5px solid #000 !important; }
     .btn-submit { background: #000 !important; color: #fff !important; border-radius: 50px !important; font-weight: 900 !important; font-size: 20px !important; padding: 25px 0 !important; border: 2px solid #000 !important; margin-top: 30px !important; cursor: pointer !important; transition: all 0.3s ease !important;}
-    .btn-submit:hover { background: #fff !important; color: #000 !important; box-shadow: 5px 5px 0px #000 !important; transform: translateY(-3px); }
+    .btn-submit:hover { background: #fff !important; color: #000 !important; box-shadow: 5px 5px 0px rgba(0,0,0,0.2) !important; transform: translateY(-3px); }
 """
 
 js_func = "function() { document.body.classList.remove('dark'); }"
-
-print("⏳ [2/2] 正在建置使用者介面...")
 
 with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
     gr.HTML("<div style='text-align: center; margin-top: 50px; margin-bottom: 40px;'><div style='text-transform: uppercase; font-size: 15px; color: #555; font-weight: 900; letter-spacing: 6px; margin-bottom: 12px;'>YuanZe IEM // Education Board</div><h1 style='font-size: 4.5rem; font-weight: 900; color: #000; margin: 0; letter-spacing: -2px;'>EDUCATION®</h1></div>")
     radio_inputs = []
     
     with gr.Row(elem_id="main-layout"):
-        # 測驗區塊
         with gr.Column(elem_classes="quiz-panel", visible=True) as quiz_col:
             error_msg = gr.HTML(visible=False, elem_classes="gradio-html")
             gr.HTML("<h3 style='font-size: 26px; font-weight: 900; color: #000; margin-bottom: 10px; border-left: 6px solid #000; padding-left: 15px;'>📝 專題教授適性測驗</h3><p style='font-size: 16px; color: #555; font-weight: bold; margin-bottom: 30px; padding-left: 15px;'>請完成下方 10 題測驗，系統將自動為您生成推薦分析報表。</p>")
@@ -226,40 +236,15 @@ with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
                     for q in questions[6:10]: radio_inputs.append(gr.Radio(choices=list(q["options"].keys()), label=q["q"], elem_classes="gradio-radio"))
             submit_btn = gr.Button("🚀 提交並生成專屬推薦報表", elem_classes="btn-submit")
 
-        # 結果區塊
         with gr.Column(visible=False, elem_classes="quiz-panel") as result_col:
-            # 1. HTML 標題
-            chart_title = gr.HTML(elem_classes="gradio-html")
-            
-            # 2. 將圓餅圖與 HTML 圖例並排顯示
-            with gr.Row():
-                with gr.Column(scale=1):
-                    plot_output = gr.Plot(show_label=False)
-                with gr.Column(scale=1):
-                    legend_output = gr.HTML(elem_classes="gradio-html")
-            
-            # 3. 推薦教授詳細資料
+            plot_output = gr.Plot(show_label=False)
             html_output = gr.HTML(elem_classes="gradio-html")
             reset_btn = gr.Button("🔄 重新進行測驗", elem_classes="btn-submit")
 
-    # 綁定按鈕事件 (注意 outputs 對應數量的修改)
-    submit_btn.click(
-        fn=analyze_results, 
-        inputs=radio_inputs, 
-        outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, legend_output, html_output]
-    )
-    
-    reset_btn.click(
-        fn=lambda: (
-            gr.update(visible=False, value=""), 
-            gr.update(visible=True), gr.update(visible=False), 
-            gr.update(value=""), gr.update(value=None), gr.update(value=""), gr.update(value="")
-        ), 
-        inputs=None, 
-        outputs=[error_msg, quiz_col, result_col, chart_title, plot_output, legend_output, html_output]
-    )
+    submit_btn.click(fn=analyze_results, inputs=radio_inputs, outputs=[error_msg, quiz_col, result_col, plot_output, html_output])
+    reset_btn.click(fn=lambda: (gr.update(visible=False, value=""), gr.update(visible=True), gr.update(visible=False), gr.update(value=None), gr.update(value="")), inputs=None, outputs=[error_msg, quiz_col, result_col, plot_output, html_output])
 
-print("✅ 啟動專屬網頁伺服器...")
+print("⏳ [3/3] 正在啟動專屬網頁伺服器...")
 
 port = int(os.environ.get("PORT", 7860))
 app.launch(server_name="0.0.0.0", server_port=port)
