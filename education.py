@@ -1,5 +1,5 @@
 # ============================================================
-# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.2 圖文剝離極速版)
+# 🎓 YuanZe IEM 教育版：專題教授推薦系統 (v6.3 極速渲染最終版)
 # ============================================================
 import os
 import urllib.parse
@@ -51,7 +51,7 @@ questions = [
     {"q": "Q3 做報告時，你通常最喜歡負責什麼工作？", "options": {"蒐集數據並分析結果": "蔡介元", "設計產品外觀或介面": "周金枚", "規劃工作流程與時程": "蔡啟揚", "建立網站或系統功能": "呂卓勲", "研究使用者的想法與需求": "林瑞豐", "設計計算模型解決問題": "潘劍輝"}},
     {"q": "Q4 如果未來要選修一門課，你最想修哪一門？", "options": {"資料分析與AI應用": "蔡介元", "人機互動與智慧醫療": "林瑞豐", "生產管理與供應鏈": "蔡啟揚", "網頁系統開發": "呂卓勲", "作業研究與最佳化": "潘劍輝", "人因工程與產品設計": "周金枚"}},
     {"q": "Q5 你認為自己最大的優勢是？", "options": {"能快速理解程式與系統架構": "呂卓勲", "很會觀察別人的需求": "林瑞豐", "邏輯分析能力強": "潘劍輝", "喜歡改善流程與管理事情": "蔡啟揚", "對設計和美感很敏銳": "周金枚", "喜歡研究資料中的規律": "蔡介元"}},
-    {"q": "Q6 下列哪個專題題目最吸引你？", "options": {"APP使用體驗改善研究": "林瑞豐", "AI預測模型建立": "蔡介元", "最佳送貨路線規劃": "潘劍輝", "智慧工廠排程改善": "蔡啟揚", "電商平台功能開發": "呂卓勲", "高齡者產品落計研究": "周金枚"}},
+    {"q": "Q6 下列哪個專題題目最吸引你？", "options": {"APP使用體驗改善研究": "林瑞豐", "AI預測模型建立": "蔡介元", "最佳送貨路線規劃": "潘劍輝", "智慧工廠排程改善": "蔡啟揚", "電商平台功能開發": "呂卓勲", "高齡者產品設計研究": "周金枚"}},
     {"q": "Q7 畢業後你最想從事哪種工作？", "options": {"資料分析師或AI工程師": "蔡介元", "產品設計師或UX設計師": "周金枚", "軟體工程師": "呂卓勲", "營運管理人員": "蔡啟揚", "使用者研究員": "林瑞豐", "決策分析師": "潘劍輝"}},
     {"q": "Q8 如果參加比賽，你最想挑戰哪一類？", "options": {"創新設計競賽": "周金枚", "商業流程改善競賽": "蔡啟揚", "程式設計競賽": "呂卓勲", "AI應用競賽": "蔡介元", "智慧醫療創新競賽": "林瑞豐", "數學建模競賽": "潘劍輝"}},
     {"q": "Q9 空閒時間學習新東西時，你最可能選擇？", "options": {"AI工具與資料分析": "蔡介元", "網頁或APP開發": "呂卓勲", "流程管理與企業經營": "蔡啟揚", "心理學與使用者行為": "林瑞豐", "最佳化演算法": "潘劍輝", "設計軟體與創意課程": "周金枚"}},
@@ -88,16 +88,18 @@ def analyze_results(*answers):
         colors = [color_palette[i % len(color_palette)] for i in range(len(values))]
 
         # =========================================================
-        # 📊 1. 產生純淨圓餅圖 (完全不含標籤與文字，避免亂碼方塊)
+        # 📊 1. 產生純數字百分比圓餅圖 (不帶任何中文，完美避免亂碼)
         # =========================================================
         fig, ax = plt.subplots(figsize=(6, 6), facecolor='#fbfbfb')
         ax.set_facecolor('#fbfbfb')
         explode = [0.08 if val == max_val else 0 for val in values]
         
-        # 這裡不放 labels，也不放 autopct
-        ax.pie(
+        # 只保留 autopct='%1.1f%%'，這樣圓餅圖內就會出現數字
+        wedges, texts, autotexts = ax.pie(
             values, explode=explode, colors=colors,
-            startangle=140, wedgeprops={'edgecolor': 'white', 'linewidth': 3}
+            autopct='%1.1f%%', startangle=140,
+            wedgeprops={'edgecolor': 'white', 'linewidth': 3},
+            textprops={'color': '#ffffff', 'fontsize': 16, 'fontweight': 'bold'}
         )
 
         # =========================================================
@@ -136,7 +138,6 @@ def analyze_results(*answers):
             photo_url = professors_photos[prof]
             ndltd_url = f"https://www.google.com/search?q={urllib.parse.quote(f'site:ndltd.ncl.edu.tw \"{prof}\" 元智大學 工業工程與管理')}"
 
-            # 最高分紅標，其餘灰標
             if score == max_val:
                 badge_html = "<span style='font-weight: 900; color: #fff; font-size: 13px; background: #E11D48; padding: 6px 16px; border-radius: 30px; letter-spacing: 2px;'>⭐ TOP MATCH (首選推薦)</span>"
                 border_style = "border: 4px solid #000;"
@@ -237,21 +238,17 @@ with gr.Blocks(css=css, js=js_func, title="YuanZe IEM - Education") as app:
             submit_btn = gr.Button("🚀 提交並生成專屬推薦報表", elem_classes="btn-submit")
 
         with gr.Column(visible=False, elem_classes="quiz-panel") as result_col:
-            # 1. 獨立的頂部大標題
             chart_title = gr.HTML(elem_classes="gradio-html")
             
-            # 2. 左右並排：左圖表、右圖例
             with gr.Row():
                 with gr.Column(scale=1):
                     plot_output = gr.Plot(show_label=False)
                 with gr.Column(scale=1):
                     legend_output = gr.HTML(elem_classes="gradio-html")
             
-            # 3. 下方完整的教授推薦列表
             html_output = gr.HTML(elem_classes="gradio-html")
             reset_btn = gr.Button("🔄 重新進行測驗", elem_classes="btn-submit")
 
-    # 綁定按鈕事件 (對應 outputs 的順序)
     submit_btn.click(
         fn=analyze_results, 
         inputs=radio_inputs, 
